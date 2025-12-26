@@ -1,6 +1,10 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  transpilePackages: ["anglelab-core"],
+import type { NextConfig } from "next";
+import path from "node:path";
+
+const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.join(__dirname, ".."),
+  },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
