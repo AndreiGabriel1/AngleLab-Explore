@@ -1,108 +1,102 @@
 # Phase 2 - Interview Anchors
 
-This document contains interview-facing explanations for Phase 2.
-It focuses on why the design exists and what boundaries it introduces.
+This document is interview-facing.
+It explains why Phase 2 exists and what boundaries it introduces, without relying on implementation details.
 
 ---
 
-## Slice 1 - Deterministic Rules Pipeline (implemented)
+## Slice 1 - Deterministic Rules Pipeline (Implemented)
 
-### Problem it solves
-Phase 1 produces “raw” output. In real systems, raw output usually needs an intermediate layer that:
-- normalizes and cleans data
-- applies basic quality gates
-- ranks and selects using explicit rules
-- can say “no decision” instead of guessing
+### Problem
+Phase 1 produces raw ideas.
+In a real product, raw output is rarely ready for presentation or decision-making.
 
-This is a product need, but it should not contaminate the core.
+You typically need:
+- Normalization and basic quality rules
+- Prioritization
+- A safe way to say "no decision" instead of guessing
 
 ### Why this is not Phase 1
-Phase 1 is about a stable product core and clean boundaries.
-If decision rules enter too early:
-- responsibilities get blurred
-- the core becomes harder to reason about
-- the system becomes harder to defend
+Phase 1 is the Product Core: stable flow, clean boundaries, and predictable state transitions.
+Introducing rules and policy too early would:
+- Blur ownership between layers
+- Increase decision surface area
+- Make the core harder to reason about and defend
 
-So Phase 2 is an extension layer with strict scope limits.
+Phase 2 is an extension layer by design.
 
 ### Boundary introduced
-A rules pipeline that sits after Phase 1 success:
+Phase 2 adds a rules pipeline between Domain output and the consumer.
 
-- Phase 1 produces ideas and a ViewState.
-- Phase 2 transforms Phase 1 output through deterministic stages:
-  - `refineIdeas`
-  - `rankIdeas`
-  - `selectIdeas`
+Core flow:
+- Phase 1 generates domain ideas
+- Phase 2 refines, ranks, and selects using deterministic rules
+- The consumer renders results and notes
 
 Ownership:
-- Domain remains pure and unchanged.
-- Phase 2 owns judgment (rules and policies).
-- Consumers render results and notes, but do not invent explanations.
+- Domain generates data only
+- Pipeline applies rules and explains outcomes
+- Consumer renders output (no business logic)
 
-### Key design choices (what to emphasize)
-- rules-only, no AI, no randomness
-- fully deterministic ordering (including tie-break rules)
-- explicit notes explaining what happened (`refine:*`, `rank:*`, `select:*`, `degrade:*`)
-- allowed to return empty selection (“no decision”) rather than fake confidence
-- safe degradation policy (fall back to Phase 1 output)
+### Key design choices
+- Rules-only (no AI, no external calls)
+- Fully deterministic behavior
+- Explicit failure handling via notes
+- No forced answers under low signal
+- Pipeline owns notes (UI does not invent explanations)
 
-### Trade-off (intentional)
+### Trade-off
 Pros:
-- judgment is isolated and explainable
-- easy to test and reason about
-- safe behavior under low signal
+- A clear judgment layer without contaminating the core
+- Explainable behavior under edge cases
+- Stable, testable decision rules
 
 Cons:
-- limited sophistication by design
-- requires discipline to avoid turning it into a rules platform
+- Limited sophistication (by intent)
+- Requires discipline to avoid feature creep in the pipeline
 
 ---
 
-## Slice 2 - External Ideas Source Boundary (design-only)
+## Slice 2 - External Source Integration Boundary (Design-only)
 
 ### Status
-Design-only. Not implemented by choice.
+Design-only. Not implemented in this version.
 
-### Problem it addresses
-In production, ideas often come from external sources (APIs, internal services, or AI later).
-External sources introduce failure modes:
-- network errors
-- timeouts
-- rate limits
-- partial or invalid responses
+### Problem
+In production, ideas often come from external sources:
+- APIs
+- Internal services
+- AI systems (later)
 
-A clean architecture needs a boundary that absorbs instability.
+Those sources add real failure modes:
+- Timeouts
+- Rate limits
+- Network instability
+- Partial responses
 
 ### Why it is not implemented here
-It adds a lot of complexity and expands the failure surface area.
-For this project, the goal is to demonstrate core boundaries and deterministic judgment,
-not to build a reliability platform.
+Adding external instability too early would:
+- Contaminate the Product Core
+- Expand scope without increasing interview signal
+- Shift the project into reliability engineering instead of boundary clarity
+
+This slice exists as a design discussion, not as code.
 
 ### Intended boundary
-An adapter/gateway that isolates external instability:
+Introduce a gateway/adapter boundary that isolates instability:
 
-- Orchestrator calls `ExternalIdeasSource` (adapter)
-- Adapter handles `safeFetch` and error mapping
-- Orchestrator decides degradation strategy:
-  - fall back to local deterministic ideas, or
-  - return an explicit error state
+- Orchestrator -> ExternalIdeasSource (adapter) -> SafeFetch (timeout/retry/error mapping)
 
 Ownership:
 - Domain stays pure
-- Adapter isolates instability
-- Orchestrator owns degradation decisions
+- Adapter owns interaction with the external source and maps failures
+- Orchestrator owns degradation strategy (fallback vs error state)
 
-### Trade-off (intentional)
+### Trade-off
 Pros:
-- enterprise-style boundary for external instability
-- clear ownership of failure and fallback behavior
+- Clear ownership of failures
+- A production-ready reliability boundary
 
 Cons:
-- significant scope increase
-- not needed for an interview-oriented minimal codebase
-
----
-
-## How to pitch Phase 2 in one line
-Phase 2 adds decision-making as a deterministic, testable layer that never contaminates the product core,
-and it can explicitly return “no decision” with reasons instead of guessing.
+- Significant complexity
+- Out of scope for a small, interview-focused system

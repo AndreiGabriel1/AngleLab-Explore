@@ -1,59 +1,61 @@
-# AngleLab — Demo Script
+# AngleLab - Demo Script
 
-## Short version (60–90 seconds)
+Designed to be delivered without scrolling through code.
+Use the short version by default. Use the extended version if you have time.
 
-### 1) What it is (10–15s)
-AngleLab is a compact end-to-end system that goes from raw input to output through explicit layers.
-It is small on purpose: the point is structure and decision isolation, not feature surface area.
+---
 
-### 2) Phase 1 — Product Core (20–25s)
-Phase 1 takes a raw angle string, validates it, runs a deterministic idea generator, and returns a ViewState.
+## Short version (60-90 seconds)
 
-Key boundary rules:
-- the domain generates data only (no validation, no decisions)
-- schema validates raw input
-- the orchestrator handles control flow and state transitions
-- consumers render the ViewState
+AngleLab is a compact end-to-end system built to demonstrate clean boundaries,
+deterministic behavior, and explicit failure handling.
 
-### 3) Phase 2 — Deterministic rules (25–30s)
-After a successful Phase 1 run, Phase 2 runs a rules-only pipeline: refine -> rank -> select.
-It is deterministic, produces notes, and it is allowed to return “no decision” instead of guessing.
+It takes raw input, validates it, runs a deterministic idea generator, and returns a UI-agnostic state.
+On top of that, a second layer applies rules for refinement, ranking, and selection without touching the core.
 
-### 4) Consumers (10–15s)
-The same core is consumed by a CLI and a minimal Next.js page. No business logic lives in the UI.
+Phase 1 is the Product Core:
+- Schema validates raw input (`parseAngle`) and returns a safe result or an explicit error.
+- Orchestration (`loadIdeasForAngle`) owns the workflow and state transitions.
+- Domain (`generateIdeas`) is pure and deterministic: no validation, no policy, no side effects.
+- ViewState models the flow (`idle / loading / success / error`) and is reusable across consumers.
 
-### Close (5s)
-That is the whole project: deterministic behavior, explicit ownership, and safe outcomes under low signal.
+After Phase 1 succeeds, Phase 2 runs a rules-only pipeline: refine, rank, select.
+It is deterministic, produces notes, and it is allowed to return "no decision" instead of guessing.
 
+The same core is consumed by a CLI and a minimal Next.js page.
+The UI only renders outputs; it does not contain business rules.
 
-## Extended version (2–3 minutes)
+That is the whole project: predictable behavior, decision isolation, and safe outcomes under low signal.
 
-### 1) What this project is (15–20s)
-AngleLab is a small end-to-end system built to show how I separate concerns: validation, orchestration, domain behavior, and decision rules.
-I kept it intentionally tight so it can be explained quickly and defended without digging through code.
+---
 
-### 2) Phase 1 flow in the CLI (40–60s)
-- Run the CLI and input an invalid angle to show the error state.
-- Input a valid angle to show success.
+## Extended version (2-3 minutes)
+
+Start with the boundaries, then show one normal path and one low-signal path.
+
+1) Phase 1 in the CLI
+- Run the CLI.
+- Enter an invalid angle to show an explicit error state.
+- Enter a valid angle to show a success state and deterministic output.
 
 What to point out:
-- schema is the only place that turns raw input into a valid Angle
-- the orchestrator drives the state machine (idle -> loading -> success/error)
-- the domain is pure and deterministic
-- ViewState is consumer-agnostic, so multiple consumers can reuse the same flow
+- Schema is the only place that turns raw input into a valid Angle.
+- Orchestration owns the flow (idle -> loading -> success/error).
+- Domain stays pure and deterministic.
+- ViewState is consumer-agnostic, so multiple consumers can reuse the same flow.
 
-### 3) Phase 2 behavior (45–60s)
+2) Phase 2 behavior
 After Phase 1 success, Phase 2 runs:
-- refineIdeas: trims/drops empty input, dedupes deterministically
-- rankIdeas: deterministic heuristic scoring, stable tie-break by id
-- selectIdeas: explicit policy (threshold + top N), and it can return an empty selection
+- refineIdeas: normalization, drop empty, deterministic dedupe
+- rankIdeas: deterministic heuristic score with stable tie-break by id
+- selectIdeas: explicit policy (threshold + top N), can return an empty selection
 
-If selection is empty, the pipeline explains why via notes (for example: low signal or tie),
-and the system can safely fall back to Phase 1 output. No guessing.
+If selection is empty, the pipeline explains why via notes.
+There is no forced answer and no hidden randomness.
 
-### 4) Web consumer (20–30s)
-Open the Next.js page and show that it renders the same outputs (Phase 1 ideas plus Phase 2 results and notes).
+3) Web consumer
+Open the Next.js page and show the same flow rendered in the browser.
 Call out the boundary rule: the UI is wiring and rendering only.
 
-### Close (10–15s)
-This is not a feature project. It is a structure project: predictable behavior, decision isolation, and explicit failure handling.
+AngleLab is not a feature project. It is a structure project:
+clean ownership, deterministic behavior, and explicit failure handling.

@@ -1,9 +1,10 @@
 # AngleLab
 
-AngleLab is a small end-to-end system built to demonstrate architectural judgment:
-clear boundaries, deterministic behavior, and explicit failure handling.
+AngleLab is a compact end-to-end system built around clear separation of concerns,
+deterministic behavior, and explicit handling of failure cases.
 
-The goal is structure and decision isolation, not feature count.
+The scope is deliberately small so the architecture stays easy to inspect and discuss.
+
 
 ---
 

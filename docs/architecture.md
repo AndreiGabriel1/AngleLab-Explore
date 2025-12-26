@@ -4,7 +4,8 @@
 AngleLab is a deliberately small but complete system meant to show clean boundaries,
 deterministic behavior, and controlled failure handling.
 
-The focus is structure and explainability, not feature volume.
+The scope stays deliberately small so the structure is easy to reason about.
+
 
 ---
 
