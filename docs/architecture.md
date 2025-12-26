@@ -1,39 +1,32 @@
 # AngleLab — Architecture Overview
 
 ## Purpose
-AngleLab is a deliberately small but complete system built to demonstrate
-architectural judgment rather than feature volume.
+AngleLab is a deliberately small but complete system meant to show clean boundaries,
+deterministic behavior, and controlled failure handling.
 
-The goal is to show how a product can be structured from input to output with:
-- clear ownership boundaries,
-- deterministic behavior,
-- failure-first thinking,
-- and explicit trade-offs.
-
-The system is intentionally minimal, explainable, and extensible without being over-engineered.
+The focus is structure and explainability, not feature volume.
 
 ---
 
 ## High-Level Structure
-
 AngleLab is organized into three phases, each with a distinct responsibility:
 
-- **Phase 1 — Product Core**
+- Phase 1 — Product Core
   - Pure domain logic
   - Input validation
   - Orchestration
   - ViewState modeling
 
-- **Phase 2 — Deterministic Rules Pipeline**
+- Phase 2 — Deterministic Rules Pipeline
   - Quality gates
   - Decision rules
   - Ranking and selection
-  - Failure and degradation handling
+  - Notes and degradation policy
 
-- **Phase 3 — Consumers & Narrative**
-  - CLI and Web consumers
-  - Minimal, high-signal testing
-  - Documentation and interview narrative
+- Phase 3 — Consumers & Narrative
+  - CLI and Web consumers (Next.js)
+  - Minimal, targeted tests
+  - Documentation and demo script
 
 Each phase builds on the previous one without mutating or contaminating it.
 
@@ -42,16 +35,16 @@ Each phase builds on the previous one without mutating or contaminating it.
 ## Layered Architecture & Ownership
 
 ### 1) Domain (Phase 1)
-**Owns:**
+Owns:
 - Business meaning
 - Deterministic data generation
 
-**Components:**
+Components:
 - `Angle` (union type)
 - `Idea` (domain entity)
 - `generateIdeas(angle)`
 
-**Rules:**
+Rules:
 - Pure functions only
 - No validation
 - No decision logic
@@ -62,31 +55,31 @@ The domain produces data and nothing else.
 ---
 
 ### 2) Schema / Validation (Phase 1)
-**Owns:**
+Owns:
 - Validation of raw input
 
-**Components:**
+Component:
 - `parseAngle(raw: unknown)`
 
-**Rules:**
+Rules:
 - Converts raw input into safe, typed domain input
 - Returns explicit success or error
 - Protects the domain from invalid data
 
-Validation is intentionally kept outside the domain.
+Validation stays outside the domain to preserve domain purity.
 
 ---
 
 ### 3) Orchestrator (Phase 1)
-**Owns:**
+Owns:
 - Control flow
 - State transitions
 - Composition of steps
 
-**Components:**
+Component:
 - `loadIdeasForAngle(rawAngle)`
 
-**Responsibilities:**
+Responsibilities:
 - Validate input via the Schema layer
 - Control async flow (simulated delay)
 - Call domain logic
@@ -97,16 +90,16 @@ The orchestrator coordinates the flow but does not make business decisions.
 ---
 
 ### 4) ViewState (Phase 1)
-**Owns:**
+Owns:
 - Representation of the application flow
 
-**States:**
+States:
 - `idle`
 - `loading`
 - `success`
 - `error`
 
-**Rules:**
+Rules:
 - UI-agnostic
 - No logic
 - No decisions
@@ -117,74 +110,70 @@ ViewState allows multiple consumers to exist without duplicating logic.
 ---
 
 ### 5) Phase 2 Pipeline (Deterministic Rules)
-**Owns:**
+Judgment isolated from the core.
+
+Owns:
 - Decision-making logic
 - Quality control
-- Failure explanations
+- Failure explanations (notes)
 
-**Input:**
-- `ctx` (context, e.g. angle — treated as opaque)
+Input:
+- `ctx` (context, e.g. angle treated as an opaque string hint)
 - `PipelineIdea[]` (adapted from domain ideas)
 
-**Stages:**
+Stages:
 1. `refineIdeas`
    - Normalize text
    - Drop invalid or empty items
    - Deduplicate deterministically
 2. `rankIdeas`
    - Apply a deterministic heuristic score
-   - Detect ties and low-signal cases
+   - Detect tie and low-signal cases
 3. `selectIdeas`
    - Apply an explicit selection policy (threshold + top N)
-   - Allow empty selection (no fake confidence)
+   - Allow empty selection (no forced answers)
 
-**Key Rules:**
+Key rules:
 - Fully deterministic
-- No crashes
+- No crashes on edge cases
 - No mutation of Phase 1 objects
-- Notes are pipeline-owned
+- Notes are pipeline-owned (consumers only render)
 
 ---
 
 ## Failure & Degradation Strategy
-
 Failure is treated as a first-class outcome, not an exception.
 
 Examples:
-- No ideas after refinement → degrade to Phase 1 output
-- All scores equal → deterministic ordering + `rank:tie`
-- Low signal → `rank:low_signal`
-- No selection possible → `select:no_decision`
+- No ideas after refinement -> degrade to Phase 1 output
+- All scores equal -> deterministic ordering + `rank:tie`
+- Low signal -> `rank:low_signal`
+- No selection possible -> `select:no_decision`
 
-The system explicitly communicates why it could not decide.
+The system explicitly communicates why no decision was made.
 
 ---
 
 ## Data Flow
 
 ### Consumer Flow (CLI and Web)
-
-1. The user provides an input angle through a consumer (CLI or Web).
-2. The consumer forwards the raw input to the orchestrator.
-3. The orchestrator validates the input using the schema layer.
-4. If validation fails, an error ViewState is returned.
-5. If validation succeeds:
-   - the orchestrator enters a loading state,
-   - calls the domain to generate ideas,
-   - and returns a success ViewState.
-6. The consumer renders the Phase 1 output.
-7. After a successful Phase 1 run, the Phase 2 pipeline is executed.
-8. The consumer renders the selected results and pipeline notes.
+High-level flow:
+- User input (raw angle) -> consumer (CLI/Web)
+- Consumer -> `loadIdeasForAngle(rawAngle)`
+- Orchestrator -> `parseAngle(raw)` -> error ViewState OR success flow
+- Success flow -> `generateIdeas(angle)` -> success ViewState
+- After Phase 1 success -> adapter `toPipelineIdeas(domainIdeas)`
+- Phase 2 -> `runPhase2Pipeline(ctx, ideas)` -> refined/ranked/selected + notes
+- Consumer renders Phase 1 output + Phase 2 output + notes
 
 The same core flow is reused by both CLI and Web consumers without duplicating logic.
 
 ---
 
 ## Trade-offs (Intentional)
-
 - No AI integration (rules-only, deterministic)
 - No persistence
-- No external services
+- No external services in the implemented system
 - No UI logic inside core layers
 - Limited scope to preserve clarity
 
@@ -192,12 +181,42 @@ These trade-offs are deliberate to keep the system explainable and defensible.
 
 ---
 
-## What Would Change in Production
+## Optional Slices (Design-only, not implemented)
 
+### Optional Slice A — External Ideas Source Boundary
+Intent:
+- Introduce an external source (API/service/AI later) without contaminating the core.
+
+Boundary:
+- Orchestrator -> `ExternalIdeasSource` (adapter/gateway) -> `safeFetch`
+
+Ownership:
+- Domain stays pure
+- Adapter isolates instability (timeouts/retries/error mapping)
+- Orchestrator decides degradation (fallback to local ideas vs error state)
+
+Trade-off:
+- Adds real failure modes and reliability policy surface area, so it is intentionally out of scope for this version.
+
+### Optional Slice B — Observability Boundary
+Intent:
+- Make decisions inspectable in production (events/metrics), without pushing logging into domain/pipeline code.
+
+Boundary:
+- Consumer or Orchestrator emits structured events based on:
+  - ViewState transitions
+  - Phase 2 notes (`refine:*`, `rank:*`, `select:*`, `degrade:*`)
+
+Trade-off:
+- Useful in production, but unnecessary for a small, interview-oriented codebase.
+
+---
+
+## What Would Change in Production
 - Replace heuristics with learned models or external services
 - Introduce persistence and caching
-- Add observability and metrics
+- Add observability and metrics (optional slice above)
 - Strengthen schema validation at boundaries
-- Introduce concurrency and performance optimizations
+- Introduce concurrency/performance work only after real bottlenecks exist
 
 These concerns are intentionally excluded from this implementation.

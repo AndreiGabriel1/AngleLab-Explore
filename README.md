@@ -1,9 +1,10 @@
 # AngleLab
 
-AngleLab is a small, end-to-end system built to demonstrate architectural judgment,
-clear boundaries, and failure-first thinking.
+AngleLab is a small, end-to-end system designed to demonstrate **architectural judgment**,
+clear boundaries, and **failure-first thinking**.
 
-The project prioritizes clarity and explainability over feature volume.
+The project intentionally prioritizes clarity and explainability over feature volume.
+Every layer exists for a reason, and every omission is deliberate.
 
 ---
 
@@ -12,65 +13,81 @@ The project prioritizes clarity and explainability over feature volume.
 ### What was built
 - A pure domain model (`Angle`, `Idea`)
 - A deterministic idea generator (`generateIdeas`)
-- A schema layer for input validation
-- An orchestrator that manages control flow and state transitions
+- A schema layer for validating raw input
+- An orchestrator responsible for control flow and state transitions
 - A UI-agnostic ViewState model
-- A minimal CLI consumer
+- A minimal CLI consumer to prove the flow end-to-end
 
 ### Why it matters
 Phase 1 establishes a stable foundation:
 - runnable end-to-end,
-- safe input handling,
-- clean separation of concerns,
-- no premature complexity.
+- safe handling of invalid input,
+- explicit ownership per layer,
+- no premature decision logic or extensions.
+
+The goal of Phase 1 is not sophistication, but **correct structure**.
 
 ---
 
 ## Phase 2 — Deterministic Rules Pipeline (DONE)
 
 ### What was added
-- A rules-only pipeline executed after Phase 1 success:
+- A rules-only pipeline executed strictly after Phase 1 success:
   - `refineIdeas`
   - `rankIdeas`
   - `selectIdeas`
-- Deterministic behavior with explicit failure handling
+- Fully deterministic behavior
 - A clear input/output contract
 - Pipeline-owned explanatory notes
-- Enterprise-minimal degradation policies
+- Explicit degradation policies with no fake confidence
 
 ### Why it exists
 Phase 2 introduces judgment without contaminating the core:
 - quality gates,
 - prioritization,
-- explicit “no decision” outcomes.
+- and the ability to explicitly say “no decision”.
+
+All decision-making is isolated, explainable, and reversible.
 
 ---
 
-## Phase 3 — Consumers & Narrative (IN PROGRESS)
+## Phase 3 — Consumers & Narrative (DONE)
 
 ### Scope
-- Web consumer (Next.js)
+- A Web consumer (Next.js) reusing the same core
 - Minimal, high-signal tests
 - Architecture documentation
-- Interview-ready narrative
+- Interview-ready explanation and demo narrative
 
-Phase 3 focuses on presentation and explainability, not new logic.
+Phase 3 focuses on **presentation and explainability**, not new logic.
 
 ---
 
 ## What This Project Does Not Do (Intentionally)
+
 - No AI integration
 - No persistence
 - No external services
 - No UI logic inside core layers
 - No feature creep
 
-These constraints preserve clarity and defensibility.
+These constraints are deliberate and protect the architectural signal.
 
 ---
 
 ## How to Use
-- CLI: run the core flow end-to-end
-- Web: visualize the same flow without duplicating logic
 
-The same core is reused by all consumers.
+- **CLI**: run the full flow end-to-end and inspect pipeline decisions
+- **Web**: visualize the same flow in the browser without duplicating logic
+
+All consumers reuse the same core and orchestration layers.
+
+---
+
+## Project Status
+
+- Phase 1 — Product Core: DONE
+- Phase 2 — Deterministic Rules Pipeline: DONE
+- Phase 3 — Consumers & Narrative: DONE
+
+AngleLab is considered complete and interview-ready.
