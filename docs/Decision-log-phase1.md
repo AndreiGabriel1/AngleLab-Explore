@@ -48,9 +48,9 @@ Reason: keep the core easy to reason about and prevent early scope creep.
 - No “smartness” or decision rules in the domain.
 
 Rationale:
-- predictable behavior
-- reusable across consumers
-- easy to test mentally
+- Predictable behavior
+- Reusable across consumers
+- Easy to reason about (and to validate with small tests)
 
 ### Decision: validate raw input outside the domain
 - `parseAngle` is the only place that converts raw input into a typed `Angle`.
