@@ -85,9 +85,11 @@ Web:
 
 ---
 
-## Project status
-- Phase 1: DONE
-- Phase 2: DONE
-- Phase 3: DONE
+## Project Status
 
-AngleLab is complete and interview-ready.
+- Phase 1: Complete (Product Core)
+- Phase 2: Complete (Deterministic Rules Pipeline)
+- Phase 3: Complete (Consumers + Docs)
+
+This repository is intentionally scoped and considered interview-ready.
+Future work would be additive and introduced behind new boundaries, without changing the core.
