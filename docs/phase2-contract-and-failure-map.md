@@ -1,7 +1,9 @@
-# Phase 2 — Contract & Failure Map (SSOT)
+# Phase 2 - Contract and Failure Map (SSOT)
 
-Scope: Phase 2 este un pipeline determinist (rules-only), care primește `ctx + ideas` și produce `refined + ranked + selected + notes`.
-Nu validează Angle enum și nu schimbă meaning-ul din Phase 1.
+Scope: Phase 2 is a deterministic, rules-only pipeline. It receives `ctx + ideas` and returns:
+`refined + ranked + selected + notes`.
+
+It does not validate the Phase 1 Angle enum and it does not change Phase 1 domain meaning.
 
 ---
 
@@ -10,19 +12,22 @@ Nu validează Angle enum și nu schimbă meaning-ul din Phase 1.
 ### Owned by Phase 2
 - `ideas: PipelineIdea[]`
   - shape: `{ id: string; text: string }`
-  - `adapter` (Phase 2-owned) creează `PipelineIdea[]` din Domain Ideas (Phase 1).
-  - Phase 2 nu mută / nu păstrează referințe către obiectele din Phase 1.
+  - a Phase 2-owned adapter converts Phase 1 domain ideas into `PipelineIdea[]`
+  - Phase 2 never mutates Phase 1 objects and never keeps references to them
 
 ### Provided to Phase 2 (ctx)
 - `ctx.angle: string`
-  - **Definition:** Phase 2 tratează `ctx.angle` ca **string opac** (un “hint” pentru ranking).
-  - **Source-of-truth:** validarea angle-ului (enum/union) aparține **Phase 1 schema**.
-  - **Assumption in normal flow:** Phase 2 este apelat doar după success în Phase 1 → `ctx.angle` e “validated-by-Phase1”, dar Phase 2 nu se bazează pe asta (nu aruncă / nu crash-uiește dacă e value ciudat).
-  - **Optional note (dacă ajunge raw/unknown):** `rank:angle_unvalidated` (doar dacă detectăm că nu e unul dintre valorile cunoscute; nu obligatoriu acum).
+  - definition: treated as an opaque string hint for ranking
+  - source of truth: Angle validation belongs to the Phase 1 schema layer
+  - normal assumption: Phase 2 runs only after Phase 1 success, so `ctx.angle` is usually already validated
+  - safety rule: Phase 2 must not throw or crash even if `ctx.angle` is unexpected
+
+Optional (not required in this version):
+- if we later detect an unrecognized angle value, we may add `rank:angle_unvalidated`
 
 ### Not owned by Phase 2
-- Validarea Angle enum (Phase 1 schema owns)
-- Domain meaning (`title/description/angle` semantics) (Phase 1 owns)
+- Angle enum validation (Phase 1 schema owns this)
+- domain semantics (Phase 1 owns meaning and wording of ideas)
 
 ---
 
@@ -31,98 +36,100 @@ Nu validează Angle enum și nu schimbă meaning-ul din Phase 1.
 ### Always returns (no exceptions)
 - `refined: PipelineIdea[]`
 - `ranked: Array<PipelineIdea & { score: number }>`
-- `selected: Array<PipelineIdea & { score: number }>` *(may be empty)*
-- `notes: string[]` *(may be empty)*
+- `selected: Array<PipelineIdea & { score: number }>` (may be empty)
+- `notes: string[]` (may be empty)
 
 ### Invariants (hard rules)
-- **No crashes** on empty input (`ideas=[]`, `text=""`, weird chars, etc.).
-- **If `selected` is empty → `notes` MUST explain WHY** (minimum 1 note).
-- **Ranking is deterministic**, including tie-break by `id`.
-- **Phase 2 never mutates Phase 1 domain objects** (adapter creates new objects).
+- no crashes on empty input (`ideas=[]`), empty text, weird characters, etc.
+- ranking is fully deterministic, including tie-break by `id`
+- Phase 2 never mutates Phase 1 objects (adapter creates new objects)
+- if `selected` is empty, `notes` must explain why (at least one note)
 
 ---
 
-## 3) Failure Map (Anti-Happy-Path)
+## 3) Failure Map (anti-happy-path)
 
 ### 3.1 Refine failures
-Refine’s job: normalize + drop invalid + dedupe (rules-only).
+Refine: normalize + drop invalid + dedupe (rules-only).
 
-- **All ideas removed**
+- all ideas removed
   - output: `refined=[]`
   - note: `refine:all_removed`
 
-- **Duplicates collapsed**
-  - behavior: collapse duplicates deterministically (stable order, keep first by input order; ties resolved by id only if needed)
-  - note: `refine:dedup:<N>` where `<N>` = number removed
+- duplicates collapsed
+  - behavior: deterministic dedupe (keep first occurrence in input order)
+  - note: `refine:dedup:<N>` where `<N>` is the number removed
 
-- **Empty/whitespace removed**
-  - behavior: remove items whose normalized `text` is empty
+- empty/whitespace removed
+  - behavior: normalize and drop items whose final text is empty
   - note: `refine:drop_empty:<N>`
 
-*(Optional, allowed later without scope creep: `refine:trim`, `refine:collapse_ws` only if we want visibility.)*
+Optional (allowed later, but not required):
+- `refine:trim`
+- `refine:collapse_ws`
 
 ### 3.2 Rank failures
-Rank’s job: compute deterministic heuristic score + ordering.
+Rank: deterministic heuristic score + deterministic ordering.
 
-- **All scores equal**
-  - behavior: keep deterministic order via tie-break by `id`
+- all scores equal
+  - behavior: deterministic order via tie-break by `id`
   - note: `rank:tie`
 
-- **Cannot discriminate (low signal)**
-  - behavior: still produce ranked deterministic list
+- cannot discriminate (low signal)
+  - behavior: still return ranked list deterministically
   - note: `rank:low_signal`
 
 ### 3.3 Select failures
-Select’s job: apply a selection policy (threshold + topN) without fake confidence.
+Select: apply an explicit policy (threshold + topN) without fake confidence.
 
-- **None pass threshold**
+- none pass threshold
   - output: `selected=[]`
   - note: `select:no_decision`
 
-- **Fewer than minimum**
-  - If we choose fallback list:
-    - output: `selected=[...]` (explicit fallback policy)
+- fewer than minimum
+  - if we ever choose a fallback policy:
+    - output: `selected=[...]`
     - note: `select:fallback:<details>`
-  - If we do NOT choose fallback:
+  - default for this project: no fallback
     - output: `selected=[]`
     - note: `select:no_decision`
 
-*(SSOT default for “enterprise minimal”: prefer **no fake confidence** → empty + note.)*
-
 ---
 
-## 4) Degradation Policy (Enterprise Minimal)
+## 4) Degradation Policy (enterprise-minimal)
 
 ### If refine outputs 0 ideas
+Return:
 - `refined=[]`
 - `ranked=[]`
 - `selected=[]`
-- `notes` MUST include (in order):
-  - `refine:all_removed` *(or drop reason)*
+- `notes` must include (in order):
+  - the refine note (`refine:all_removed` or equivalent)
   - `degrade:phase1_only`
 
-**Consumer guidance:** UI/CLI poate afișa ideile din Phase 1 (source list) fără “smart selection”.
+Consumer guidance:
+- the UI/CLI can render Phase 1 output (source list) without "smart selection"
 
-### If rank low signal
+### If rank is low signal
 - still return deterministic `ranked`
-- include note: `rank:low_signal`
-- selection still applies policy normally (but likely ends in `select:no_decision`)
+- include `rank:low_signal`
+- selection still runs the normal policy (likely ends in `select:no_decision`)
 
-### If select no decision
+### If select returns no decision
 - `selected=[]`
-- include note: `select:no_decision`
-- **no “best guess”** implicit
+- include `select:no_decision`
+- no implicit "best guess"
 
 ---
 
 ## 5) Notes Policy
 
 ### Ownership
-- Notes sunt **pipeline-owned**, nu UI-owned.
-- UI/CLI doar afișează / loghează; nu inventează explicații.
+- notes are pipeline-owned
+- consumers render or log notes, but never invent explanations
 
 ### Format
-- `"<stage>:<reason>[:details]"`
+- `<stage>:<reason>[:details]`
   - examples:
     - `refine:dedup:2`
     - `refine:drop_empty:1`
@@ -132,25 +139,25 @@ Select’s job: apply a selection policy (threshold + topN) without fake confide
     - `degrade:phase1_only`
 
 ### Ordering
-- Notes are appended strictly in this order:
-  1) refine
-  2) rank
-  3) select
-  4) degrade
+Notes are appended strictly in this order:
+1) refine
+2) rank
+3) select
+4) degrade
 
-### Minimality rule
-- Notes should be:
-  - stable (no randomness)
-  - short
-  - enough to explain “empty selected” and major pipeline events
-  - no verbose prose
+### Minimality
+Notes should be:
+- stable (no randomness)
+- short
+- enough to explain empty selection and major pipeline events
+- not verbose prose
 
 ---
 
-## 6) Implementation order -- //IMPLEMENTED. 
+## 6) Implementation order (implemented)
 
-1) Implement `refineIdeas` (normalize, drop empty, dedupe, notes)
-2) Implement `rankIdeas` (deterministic heuristic + tie-break + low-signal detection + notes)
-3) Implement `selectIdeas` (threshold + topN, empty => note; optional fallback decision)
-4) Ensure orchestration aggregates notes in strict order
-5) Add 1 happy path + 1 failure path verification (manual run or minimal tests later)
+1) `refineIdeas` (normalize, drop empty, dedupe, notes)
+2) `rankIdeas` (deterministic heuristic + tie-break + low-signal detection + notes)
+3) `selectIdeas` (threshold + topN, empty => note; fallback intentionally not used)
+4) `runPhase2Pipeline` aggregates notes in strict order and applies degradation policy
+5) minimal tests to cover key behavior

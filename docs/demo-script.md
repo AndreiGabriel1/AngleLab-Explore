@@ -1,89 +1,65 @@
-# AngleLab — Demo Script (2–3 minutes)
+# AngleLab - Demo Script
 
-## Goal
-Demonstrate architectural judgment, clean boundaries, and failure-first thinking,
-without scrolling through code.
+## 60-90 seconds (default)
 
----
+Goal: show a small end-to-end system with clear boundaries and deterministic behavior.
 
-## Step 1 — What this project is (15–20s)
+1) What it is (10-15s)
+AngleLab is a compact system that goes from raw input to output through explicit layers.
+It is small on purpose: the point is structure and decision isolation, not feature surface area.
 
-AngleLab is a small but complete system built to show how I structure a product
-from input to output with clear ownership boundaries.
+2) Phase 1 - Product Core (20-25s)
+Phase 1 takes a raw angle string, validates it, runs a deterministic idea generator, and returns a ViewState.
+Key boundary rules:
+- domain generates data only (no validation, no decisions)
+- schema validates raw input
+- orchestrator handles control flow and state transitions
+- consumers render the ViewState
 
-The focus is not features, but:
-- determinism,
-- explainability,
-- and controlled failure.
+3) Phase 2 - Deterministic rules (25-30s)
+After a successful Phase 1 run, Phase 2 runs a rules-only pipeline: refine -> rank -> select.
+It is deterministic, produces notes, and it is allowed to return "no decision" instead of guessing.
 
----
+4) Consumers (10-15s)
+The same core is consumed by a CLI and a minimal Next.js page.
+No business logic lives in the UI.
 
-## Step 2 — Phase 1: Product Core (30–40s)
+Close (5s)
+That is the whole project: deterministic behavior, explicit ownership, and safe outcomes under low signal.
 
-Phase 1 is a minimal end-to-end core.
 
-Flow:
-- user provides an angle,
-- input is validated,
-- ideas are generated deterministically,
-- state is represented via a ViewState.
+## 2-3 minutes (extended)
 
-Important points:
-- the domain is pure,
-- validation lives outside the domain,
-- orchestration controls flow but makes no decisions,
-- consumers only render state.
+Goal: demonstrate the boundaries, then show one "happy path" and one "no decision" path.
 
-This phase proves the system works end-to-end.
+Step 1 - What this project is (15-20s)
+AngleLab is a small end-to-end system that I built to show how I separate concerns:
+validation, orchestration, domain behavior, and decision rules.
+I kept it intentionally tight so it can be explained quickly and defended without digging through code.
 
----
+Step 2 - Show Phase 1 flow in the CLI (40-60s)
+- Run the CLI and input an invalid angle to show the error state.
+- Input a valid angle to show success.
+What to point out:
+- schema is the only place that turns raw input into a valid Angle
+- orchestrator drives the state flow (idle -> loading -> success/error)
+- domain is pure and deterministic
+- ViewState is consumer-agnostic, so multiple consumers can reuse the same flow
 
-## Step 3 — Phase 2: Rules Pipeline (45–60s)
+Step 3 - Show Phase 2 behavior (45-60s)
+After Phase 1 success, Phase 2 runs:
+- refineIdeas: normalizes text, drops empty, dedupes deterministically
+- rankIdeas: deterministic heuristic scoring, stable tie-break by id
+- selectIdeas: explicit policy (threshold + top N), and it can return an empty selection
+Important point:
+If selection is empty, the pipeline explains why via notes (for example: low signal or tie),
+and the system can safely fall back to Phase 1 output. No guessing.
 
-Phase 2 adds judgment without touching the core.
+Step 4 - Web consumer (20-30s)
+Open the Next.js page.
+Show that it renders the same outputs (Phase 1 ideas + Phase 2 results and notes).
+Call out the boundary rule: the UI is wiring and rendering only.
 
-After Phase 1 succeeds:
-- ideas are refined (cleaned and deduplicated),
-- ranked deterministically,
-- and selected using an explicit policy.
-
-Key point:
-the system is allowed to return **no selection**.
-
-If it cannot decide, it says so explicitly and explains why via notes.
-
-There is no AI and no randomness. Everything is deterministic and explainable.
-
----
-
-## Step 4 — Failure-first behavior (20–30s)
-
-Failure is a valid outcome:
-- low signal,
-- ties,
-- empty input,
-- no confident selection.
-
-Instead of guessing, the system degrades safely
-and communicates the reason.
-
-This avoids fake confidence.
-
----
-
-## Step 5 — Consumers (20–30s)
-
-The same core is consumed by:
-- a CLI,
-- and a minimal Web UI (Next.js).
-
-No logic is duplicated.
-Consumers only render outputs produced by the core.
-
----
-
-## Closing (10–15s)
-
-This project is intentionally small.
-It is designed to be explained clearly in minutes
-and defended in an interview without scrolling through code.
+Close (10-15s)
+This is not a feature project. It is a systems-structure project:
+deterministic behavior, decision isolation, and explicit failure handling.

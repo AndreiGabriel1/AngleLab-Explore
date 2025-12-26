@@ -1,123 +1,108 @@
-# Phase 2 — Interview Anchors
+# Phase 2 - Interview Anchors
 
 This document contains interview-facing explanations for Phase 2.
-It focuses on design reasoning rather than implementation details.
+It focuses on why the design exists and what boundaries it introduces.
 
 ---
 
-## Slice #1 — Deterministic Rules Pipeline (Implemented)
+## Slice 1 - Deterministic Rules Pipeline (implemented)
 
-### Problem
-Phase 1 produces ideas in a raw form.
-In real systems, raw output is rarely suitable for presentation or decision-making.
+### Problem it solves
+Phase 1 produces “raw” output. In real systems, raw output usually needs an intermediate layer that:
+- normalizes and cleans data
+- applies basic quality gates
+- ranks and selects using explicit rules
+- can say “no decision” instead of guessing
 
-A system needs:
-- normalization,
-- quality rules,
-- prioritization,
-- and the ability to explicitly say “I cannot decide”.
+This is a product need, but it should not contaminate the core.
 
----
+### Why this is not Phase 1
+Phase 1 is about a stable product core and clean boundaries.
+If decision rules enter too early:
+- responsibilities get blurred
+- the core becomes harder to reason about
+- the system becomes harder to defend
 
-### Why This Is Not Phase 1
-Phase 1 establishes a stable Product Core with clean boundaries.
-Introducing rules and decisions too early would:
-- blur responsibilities,
-- increase complexity,
-- and reduce clarity.
+So Phase 2 is an extension layer with strict scope limits.
 
-Phase 2 exists as an explicit extension layer.
+### Boundary introduced
+A rules pipeline that sits after Phase 1 success:
 
----
-
-### Boundary Introduced
-A rules pipeline between Domain and Consumer:
-
-- Domain generates ideas
-- Pipeline refines, ranks, and selects
-- Consumer renders the result
+- Phase 1 produces ideas and a ViewState.
+- Phase 2 transforms Phase 1 output through deterministic stages:
+  - `refineIdeas`
+  - `rankIdeas`
+  - `selectIdeas`
 
 Ownership:
-- Domain remains pure and deterministic
-- Pipeline transforms and decides
-- Consumer performs no logic
+- Domain remains pure and unchanged.
+- Phase 2 owns judgment (rules and policies).
+- Consumers render results and notes, but do not invent explanations.
+
+### Key design choices (what to emphasize)
+- rules-only, no AI, no randomness
+- fully deterministic ordering (including tie-break rules)
+- explicit notes explaining what happened (`refine:*`, `rank:*`, `select:*`, `degrade:*`)
+- allowed to return empty selection (“no decision”) rather than fake confidence
+- safe degradation policy (fall back to Phase 1 output)
+
+### Trade-off (intentional)
+Pros:
+- judgment is isolated and explainable
+- easy to test and reason about
+- safe behavior under low signal
+
+Cons:
+- limited sophistication by design
+- requires discipline to avoid turning it into a rules platform
 
 ---
 
-### Key Design Decisions
-- Rules-only (no AI)
-- Fully deterministic
-- Explicit failure handling
-- No fake confidence
-- Notes are pipeline-owned
-
----
-
-### Trade-off
-**Pros:**
-- Clear judgment layer
-- Explainable decisions
-- Safe failure behavior
-
-**Cons:**
-- Limited sophistication
-- Requires discipline to avoid feature creep
-
-This trade-off is intentional.
-
----
-
-## Slice #2 — External Source Integration (Design Only)
+## Slice 2 - External Ideas Source Boundary (design-only)
 
 ### Status
-Design-only. Not implemented intentionally.
+Design-only. Not implemented by choice.
 
----
-
-### Problem
-Real systems often integrate external sources:
-- APIs
-- internal services
-- AI systems
-
-These introduce failure modes:
+### Problem it addresses
+In production, ideas often come from external sources (APIs, internal services, or AI later).
+External sources introduce failure modes:
 - network errors
 - timeouts
 - rate limits
-- partial data
+- partial or invalid responses
 
----
+A clean architecture needs a boundary that absorbs instability.
 
-### Why It Is Not Implemented
-Introducing external instability too early would:
-- contaminate the Product Core,
-- distract from architectural clarity,
-- increase scope without increasing signal.
+### Why it is not implemented here
+It adds a lot of complexity and expands the failure surface area.
+For this project, the goal is to demonstrate core boundaries and deterministic judgment,
+not to build a reliability platform.
 
-This slice exists purely as a design discussion.
+### Intended boundary
+An adapter/gateway that isolates external instability:
 
----
-
-### Intended Boundary
-
-- Orchestrator
-- ExternalIdeasSource (Adapter)
-- SafeFetch
+- Orchestrator calls `ExternalIdeasSource` (adapter)
+- Adapter handles `safeFetch` and error mapping
+- Orchestrator decides degradation strategy:
+  - fall back to local deterministic ideas, or
+  - return an explicit error state
 
 Ownership:
-- Domain remains pure
+- Domain stays pure
 - Adapter isolates instability
-- Orchestrator decides degradation strategy
+- Orchestrator owns degradation decisions
+
+### Trade-off (intentional)
+Pros:
+- enterprise-style boundary for external instability
+- clear ownership of failure and fallback behavior
+
+Cons:
+- significant scope increase
+- not needed for an interview-oriented minimal codebase
 
 ---
 
-### Trade-off
-**Pros:**
-- Enterprise-grade reliability model
-- Clear failure ownership
-
-**Cons:**
-- Significant complexity
-- Out of scope for a demonstrative project
-
-This slice is intentionally postponed.
+## How to pitch Phase 2 in one line
+Phase 2 adds decision-making as a deterministic, testable layer that never contaminates the product core,
+and it can explicitly return “no decision” with reasons instead of guessing.
