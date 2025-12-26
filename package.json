@@ -1,0 +1,22 @@
+{
+  "name": "anglelab-core",
+  "private": true,
+  "scripts": {
+    "cli": "tsx src/angle/runAngleLab.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json",
+
+    "dev:web": "npm --prefix ./web run dev",
+    "build:web": "npm --prefix ./web run build",
+    "start:web": "npm --prefix ./web run start",
+
+    "dev": "npm run dev:web",
+    "build": "npm run build:web"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "tsx": "^4.21.0",
+    "vitest": "^4.0.16",
+    "typescript": "^5.9.3"
+  }
+}
