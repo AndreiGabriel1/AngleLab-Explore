@@ -1,4 +1,3 @@
-// src/pipeline/refine/refineIdeas.ts
 import { Idea, PipelineContext, RefineResult } from "../types";
 
 function normalizeText(raw: string): string {
@@ -6,7 +5,7 @@ function normalizeText(raw: string): string {
 }
 
 export function refineIdeas(ctx: PipelineContext, ideas: Idea[]): RefineResult {
-  void ctx; // ctx not used in refine (yet)
+  void ctx;
 
   const notes: string[] = [];
 
@@ -24,13 +23,13 @@ export function refineIdeas(ctx: PipelineContext, ideas: Idea[]): RefineResult {
 
   if (droppedEmpty > 0) notes.push(`refine:drop_empty:${droppedEmpty}`);
 
-  // Dedupe by normalized text (keep first occurrence, deterministic)
+
   const seen = new Set<string>();
   const refined: Idea[] = [];
   let deduped = 0;
 
   for (const idea of normalized) {
-    const key = idea.text;
+    const key = idea.text.toLowerCase(); 
     if (seen.has(key)) {
       deduped++;
       continue;
